@@ -18,7 +18,7 @@ quotations_bp = Blueprint("quotations", __name__, url_prefix="/api/quotations")
 @quotations_bp.route("", methods=["GET"])
 @jwt_required()
 def list_quotations():
-    user = User.query.get(int(get_jwt_identity()))
+    user = db.session.get(User, int(get_jwt_identity()))
     if user.role == "Supplier":
         quotations = Quotation.query.filter_by(supplier_id=user.id).order_by(Quotation.submission_date.desc()).all()
     elif user.role == "Admin":
@@ -39,7 +39,7 @@ def submit_quotation():
     if not all(data.get(f) for f in required):
         return jsonify({"error": "Missing required fields"}), 400
 
-    part = Part.query.get(data["part_id"])
+    part = db.session.get(Part, data["part_id"])
     if not part:
         return jsonify({"error": "Part not found"}), 404
 
@@ -65,8 +65,8 @@ def submit_quotation():
 @quotations_bp.route("/<int:qid>", methods=["GET"])
 @jwt_required()
 def get_quotation(qid):
-    quotation = Quotation.query.get_or_404(qid)
-    user = User.query.get(int(get_jwt_identity()))
+    quotation = db.get_or_404(Quotation, qid)
+    user = db.session.get(User, int(get_jwt_identity()))
     if user.role == "Supplier" and quotation.supplier_id != user.id:
         return jsonify({"error": "Access denied"}), 403
     return jsonify(quotation.to_dict()), 200
@@ -77,7 +77,7 @@ def get_quotation(qid):
 @role_required("Admin")
 def evaluate_quotation(qid):
     """Process 0.3.3 — Evaluate Quotations."""
-    quotation = Quotation.query.get_or_404(qid)
+    quotation = db.get_or_404(Quotation, qid)
     data = request.get_json()
     new_status = data.get("status")
     if new_status not in ("Accepted", "Rejected"):

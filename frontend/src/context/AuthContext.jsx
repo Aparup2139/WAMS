@@ -15,7 +15,8 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (username, password) => {
     const { data } = await api.post('/auth/login', { username, password })
-    localStorage.setItem('wams_token', data.token)
+    localStorage.setItem('wams_token', data.access_token)
+    localStorage.setItem('wams_refresh_token', data.refresh_token)
     localStorage.setItem('wams_user', JSON.stringify(data.user))
     setUser(data.user)
     return data.user
@@ -23,6 +24,7 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(() => {
     localStorage.removeItem('wams_token')
+    localStorage.removeItem('wams_refresh_token')
     localStorage.removeItem('wams_user')
     setUser(null)
   }, [])

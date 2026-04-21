@@ -4,7 +4,12 @@ from datetime import datetime, timezone
 
 import bcrypt
 from flask import Blueprint, jsonify, request
-from flask_jwt_extended import create_access_token
+from flask_jwt_extended import (
+    create_access_token,
+    create_refresh_token,
+    get_jwt_identity,
+    jwt_required,
+)
 
 from app.extensions import db
 from app.models.user import User
@@ -58,8 +63,21 @@ def login():
     user.last_login = datetime.now(timezone.utc)
     db.session.commit()
 
-    token = create_access_token(identity=str(user.id))
+    identity = str(user.id)
+    access_token = create_access_token(identity=identity)
+    refresh_token = create_refresh_token(identity=identity)
+
     return jsonify({
-        "token": token,
+        "access_token": access_token,
+        "refresh_token": refresh_token,
         "user": user.to_dict(),
     }), 200
+
+
+@auth_bp.route("/refresh", methods=["POST"])
+@jwt_required(refresh=True)
+def refresh():
+    """Issue a new access token using a valid refresh token."""
+    identity = get_jwt_identity()
+    access_token = create_access_token(identity=identity)
+    return jsonify({"access_token": access_token}), 200

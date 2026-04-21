@@ -16,7 +16,7 @@ bills_bp = Blueprint("bills", __name__, url_prefix="/api/bills")
 @jwt_required()
 def list_bills():
     """Dealers see their own bills; Admins see all."""
-    user = User.query.get(int(get_jwt_identity()))
+    user = db.session.get(User, int(get_jwt_identity()))
     if user.role == "Dealer":
         bills = (
             Bill.query
@@ -36,8 +36,8 @@ def list_bills():
 @bills_bp.route("/<int:bid>", methods=["GET"])
 @jwt_required()
 def get_bill(bid):
-    bill = Bill.query.get_or_404(bid)
-    user = User.query.get(int(get_jwt_identity()))
+    bill = db.get_or_404(Bill, bid)
+    user = db.session.get(User, int(get_jwt_identity()))
     if user.role == "Dealer" and bill.order.dealer_id != user.id:
         return jsonify({"error": "Access denied"}), 403
     return jsonify(bill.to_dict()), 200
@@ -48,7 +48,7 @@ def get_bill(bid):
 @role_required("Admin")
 def generate_bill(order_id):
     """generateBill() — Admin triggers bill creation for a Fulfilled order."""
-    order = Order.query.get_or_404(order_id)
+    order = db.get_or_404(Order, order_id)
 
     if order.status != "Fulfilled":
         return jsonify({"error": "Bill can only be generated for Fulfilled orders"}), 400
@@ -68,7 +68,7 @@ def generate_bill(order_id):
 @role_required("Admin")
 def print_bill(bid):
     """printBill() — marks bill as printed."""
-    bill = Bill.query.get_or_404(bid)
+    bill = db.get_or_404(Bill, bid)
     bill.printed = True
     db.session.commit()
     return jsonify({"message": "Bill marked as printed", "bill": bill.to_dict()}), 200

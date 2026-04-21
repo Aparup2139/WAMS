@@ -18,7 +18,7 @@ orders_bp = Blueprint("orders", __name__, url_prefix="/api/orders")
 @orders_bp.route("", methods=["GET"])
 @jwt_required()
 def list_orders():
-    user = User.query.get(int(get_jwt_identity()))
+    user = db.session.get(User, int(get_jwt_identity()))
     if user.role == "Dealer":
         orders = Order.query.filter_by(dealer_id=user.id).order_by(Order.order_date.desc()).all()
     elif user.role == "Admin":
@@ -45,7 +45,7 @@ def place_order():
         return jsonify({"error": "Missing required fields: part_id, quantity_ordered, delivery_address"}), 400
 
     # --- Process 0.3.1: Validate Orders ---
-    part = Part.query.get(data["part_id"])
+    part = db.session.get(Part, data["part_id"])
     if not part:
         return jsonify({"error": "Part not found", "validation": "failed"}), 404
 
@@ -64,7 +64,6 @@ def place_order():
         }), 409
 
     # --- Process 0.3.4: Update Statuses ---
-    # Compute total from the latest accepted quotation price, or a default
     from app.models.quotation import Quotation
 
     accepted_quote = (
@@ -99,8 +98,8 @@ def place_order():
 @orders_bp.route("/<int:oid>", methods=["GET"])
 @jwt_required()
 def get_order(oid):
-    order = Order.query.get_or_404(oid)
-    user = User.query.get(int(get_jwt_identity()))
+    order = db.get_or_404(Order, oid)
+    user = db.session.get(User, int(get_jwt_identity()))
     if user.role == "Dealer" and order.dealer_id != user.id:
         return jsonify({"error": "Access denied"}), 403
     return jsonify(order.to_dict()), 200
@@ -111,14 +110,14 @@ def get_order(oid):
 @role_required("Admin")
 def update_order_status(oid):
     """Process 0.3.4 — Update Statuses (Admin fulfills or rejects)."""
-    order = Order.query.get_or_404(oid)
+    order = db.get_or_404(Order, oid)
     data = request.get_json()
     new_status = data.get("status")
     if new_status not in ("Fulfilled", "Rejected"):
         return jsonify({"error": "Status must be 'Fulfilled' or 'Rejected'"}), 400
 
     if new_status == "Fulfilled":
-        part = Part.query.get(order.part_id)
+        part = db.session.get(Part, order.part_id)
         if part.quantity_in_stock < order.quantity_ordered:
             return jsonify({"error": "Insufficient stock to fulfill"}), 409
         part.quantity_in_stock -= order.quantity_ordered

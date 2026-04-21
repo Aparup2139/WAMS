@@ -3,7 +3,9 @@
     "allow": [
       "Bash(npm install:*)",
       "Bash(python -c ':*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(find \"C:\\\\\\\\Users\\\\\\\\Aparup Ghosh\\\\\\\\Desktop\\\\\\\\WAMS\" -type f \\\\\\( -name \"*.py\" -o -name \"*.jsx\" -o -name \"*.js\" \\\\\\))",
+      "Bash(find *)"
     ]
   }
 }

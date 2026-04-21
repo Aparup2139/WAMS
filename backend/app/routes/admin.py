@@ -63,7 +63,7 @@ def list_users():
 @role_required("Admin")
 def update_user_role(uid):
     """manageRoles() — change a user's role."""
-    user = User.query.get_or_404(uid)
+    user = db.get_or_404(User, uid)
     data = request.get_json()
     new_role = data.get("role")
     if new_role not in ("Admin", "Supplier", "Dealer"):
